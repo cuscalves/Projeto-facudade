@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplicativo de Motorista de Frete</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      max-width: 600px;
+      width: 100%;
+      background-color: #fff;
+      border-radius: 16px;
+      box-shadow: 0 10px 16px rgba(0,0,0,0.1);
+      padding: 24px;
+      box-sizing: border-box;
+    }
+
+    .item-container {
+      border: 1px solid #e0e0e0;
+      padding: 16px;
+      margin-bottom: 24px;
+      border-radius: 16px;
+      background-color: #fff;
+    }
+
+    .map-container {
+      margin-top: 12px;
+    }
+
+    .map-container iframe {
+      width: 100%;
+      height: 200px;
+      border: none;
+      border-radius: 16px;
+    }
+
+    .buttons-container {
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .buttons-container button {
+      padding: 14px 32px;
+      font-size: 18px;
+      background-color: #e0e0e0;
+      color: #000;
+      border: none;
+      border-radius: 32px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .buttons-container button:hover {
+      background-color: #ddd;
+    }
+
+    #thankYouContainer {
+      text-align: center;
+      display: none;
+    }
+
+    #waitingContainer {
+      text-align: center;
+      display: none;
+      margin-top: 50px;
+    }
+
+    #waitingContainer img {
+      width: 80px;
+      height: auto;
+    }
+
+    h1 {
+      margin-bottom: 24px;
+      color: #333;
+      font-size: 32px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Detalhes do Frete</h1>
+
+    <div id="freteContainer">
+      <!-- Aqui serão inseridos os itens do arquivo txt -->
+    </div>
+
+    <div id="buttonsContainer" class="buttons-container" style="display: none;">
+      <button onclick="aceitarFrete()">Aceitar</button>
+      <button onclick="recusarFrete()">Recusar</button>
+    </div>
+
+    <div id="finalizarContainer" class="buttons-container" style="display: none;">
+      <button onclick="exibirOpcoesCobranca()">Finalizar</button>
+    </div>
+
+    <div id="opcoesCobrancaContainer" class="buttons-container" style="display: none;">
+      <button onclick="escolherPagamento('pix')">Pix</button>
+      <button onclick="escolherPagamento('debito')">Débito</button>
+      <button onclick="escolherPagamento('dinheiro')">Dinheiro</button>
+    </div>
+
+    <div id="thankYouContainer">
+      <h2>Obrigado pelo seu pagamento!</h2>
+      <button onclick="reiniciarProcesso()">Reiniciar Processo</button>
+    </div>
+
+    <div id="waitingContainer">
+      <img src="https://img.icons8.com/ios-filled/100/000000/car.png" alt="Carro">
+      <h2>Aguardando nova corrida...</h2>
+    </div>
+  </div>
+
+  <script>
+    let reloadExecuted = false;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      verificarArquivo();
+    });
+
+    function verificarArquivo() {
+      const fileUrl = 'http://127.0.0.1:8080/corrida.txt'; // Altere para o caminho do seu arquivo corrida.txt
+
+      fetch(fileUrl)
+        .then(response => {
+          if (response.ok) {
+            return response.text();
+          } else {
+            throw new Error('Arquivo não encontrado');
+          }
+        })
+        .then(contents => {
+          const items = contents.split('\n\n'); // divide o arquivo em itens
+
+          const container = document.getElementById('freteContainer');
+          container.innerHTML = '';
+
+          items.forEach(item => {
+            const lines = item.split('\n');
+            if (lines.length >= 3) {
+              const descricao = lines[0];
+              const linkMapa = lines[1];
+              const valorFrete = lines[2];
+
+              const itemContainer = document.createElement('div');
+              itemContainer.classList.add('item-container');
+
+              const descricaoElement = document.createElement('h2');
+              descricaoElement.textContent = descricao;
+
+              const mapContainer = document.createElement('div');
+              mapContainer.classList.add('map-container');
+
+              const mapIframe = document.createElement('iframe');
+              mapIframe.src = linkMapa;
+
+              const valorFreteElement = document.createElement('p');
+              valorFreteElement.textContent = `Valor do Frete: R$ ${valorFrete}`;
+
+              mapContainer.appendChild(mapIframe);
+              itemContainer.appendChild(descricaoElement);
+              itemContainer.appendChild(mapContainer);
+              itemContainer.appendChild(valorFreteElement);
+
+              container.appendChild(itemContainer);
+            }
+          });
+
+          // Recarregar a página apenas uma vez
+          if (reloadExecuted = false) {
+            reloadExecuted = true;
+            location.reload();
+          }
+
+          // Exibir os botões de aceitar/recusar após carregar os dados
+          document.getElementById('buttonsContainer').style.display = 'flex';
+          document.getElementById('freteContainer').style.display = 'block';
+          document.getElementById('waitingContainer').style.display = 'none';
+        })
+        .catch(error => {
+          console.error('Erro ao ler o arquivo:', error);
+
+          // Exibir a mensagem de aguardando nova corrida
+          document.getElementById('freteContainer').style.display = 'none';
+          document.getElementById('buttonsContainer').style.display = 'none';
+          document.getElementById('waitingContainer').style.display = 'block';
+
+          // Verificar novamente após 3 segundos
+          setTimeout(verificarArquivo, 3000);
+        });
+    }
+
+    function aceitarFrete() {
+      // Excluir o arquivo após aceitar o frete
+      const deleteUrl = 'http://127.0.0.1:8080/delete-corrida';
+
+      fetch(deleteUrl, { method: 'DELETE' })
+        .then(response => response.text())
+        .then(result => {
+          console.log(result);
+
+          // Alterar os botões para exibir apenas "Finalizar"
+          document.getElementById('buttonsContainer').style.display = 'none';
+          document.getElementById('finalizarContainer').style.display = 'flex';
+        })
+        .catch(error => console.error('Erro ao excluir o arquivo:', error));
+    }
+
+    function recusarFrete() {
+      // Excluir o arquivo de corrida.txt ao recusar o frete
+      const deleteUrl = 'http://127.0.0.1:8080/delete-corrida';
+
+      fetch(deleteUrl, { method: 'DELETE' })
+        .then(response => response.text())
+        .then(result => {
+          console.log(result);
+          alert('Frete recusado. Arquivo de corrida excluído.');
+
+          // Recarregar a página para atualizar o estado
+          location.reload();
+        })
+        .catch(error => console.error('Erro ao excluir o arquivo:', error));
+    }
+
+    function exibirOpcoesCobranca() {
+      document.getElementById('finalizarContainer').style.display = 'none';
+      document.getElementById('opcoesCobrancaContainer').style.display = 'flex';
+    }
+
+    function escolherPagamento(opcao) {
+      switch (opcao) {
+        case 'pix':
+          alert('Você escolheu pagamento via Pix. Aguarde o QR Code para efetuar o pagamento.');
+          break;
+        case 'debito':
+          alert('Você escolheu pagamento via Débito. Insira o cartão no terminal para concluir o pagamento.');
+          break;
+        case 'dinheiro':
+          alert('Você escolheu pagamento em Dinheiro. Favor ter o valor exato em mãos para o motorista.');
+          break;
+        default:
+          alert('Opção inválida.');
+          return; // Sair da função se a opção for inválida
+      }
+
+      // Exibir tela de agradecimento
+      document.getElementById('freteContainer').style.display = 'none';
+      document.getElementById('buttonsContainer').style.display = 'none';
+      document.getElementById('finalizarContainer').style.display = 'none';
+      document.getElementById('opcoesCobrancaContainer').style.display = 'none';
+      document.getElementById('thankYouContainer').style.display = 'block';
+    }
+
+    function reiniciarProcesso() {
+      // Recarregar a página para reiniciar o processo
+      location.reload();
+    }
+  </script
+</body>
+</html>

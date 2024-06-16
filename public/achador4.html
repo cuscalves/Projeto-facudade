@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplicativo de Viagem</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background-color: #fff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .header {
+      background-color: #000;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .content {
+      padding: 20px;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 10px;
+      background-color: #e0e0e0;
+      color: #000;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #ccc;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    iframe {
+      width: 100%;
+      height: 300px;
+      border: none;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Aplicativo de Viagem</h1>
+    </div>
+    <div class="content">
+      <button onclick="showTravelOptions()">Opções de Viagem</button>
+      <button onclick="selectDestination()">Escolher Destino</button>
+      <button onclick="viewChoices()">Visualizar Escolhas</button>
+      
+      <div id="travelOptions" class="hidden">
+        <h2>Opções de Viagem</h2>
+        <button onclick="selectPassenger()">Passageiro</button>
+        <button onclick="selectDelivery()">Entrega</button>
+      </div>
+      
+      <div id="choices" class="hidden">
+        <h2>Escolhas Feitas</h2>
+        <ul id="choicesList"></ul>
+      </div>
+
+      <div id="mapContainer" class="hidden">
+        <label for="destination">Destino:</label>
+        <input type="text" id="destination" placeholder="Digite o destino">
+        <button onclick="showMap()">Ir para o destino</button>
+        <iframe id="mapFrame"></iframe>
+      </div>
+
+      <div class="content">
+        <label for="inputDistancia">Distância:</label>
+        <input id="inputDistancia" type="text">
+        <button id="botaoCalcular" onclick="calculateRide()">Calcular</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    let choices = [];
+    let startPoint = null;
+    let destinationPoint = null;
+    let valorCorrida;
+    let reloadExecuted = false;
+
+    function showTravelOptions() {
+      document.getElementById('travelOptions').classList.toggle('hidden');
+    }
+
+    function selectPassenger() {
+      const numPassengers = prompt('Quantos passageiros? (até 3)');
+      if (numPassengers !== null && numPassengers !== '' && !isNaN(numPassengers) && numPassengers >= 1 && numPassengers <= 3) {
+        choices.push(`Passageiros: ${numPassengers}`);
+        alert(`Você selecionou ${numPassengers} passageiros.`);
+      } else {
+        alert('Por favor, insira um número válido de passageiros (1 a 3).');
+      }
+    }
+
+    function selectDelivery() {
+      const deliveryType = prompt('Que tipo de entrega?\n1. Pacote pequeno\n2. Compra de mercado\n3. Malas de viagem');
+      let deliveryOption;
+      switch (deliveryType) {
+        case '1':
+          deliveryOption = 'Pacote pequeno';
+          break;
+        case '2':
+          const numBags = prompt('Quantas sacolas?');
+          if (numBags !== null && numBags !== '' && !isNaN(numBags) && numBags >= 1) {
+            deliveryOption = `Compra de mercado (${numBags} sacolas)`;
+          } else {
+            alert('Por favor, insira um número válido de sacolas.');
+            return;
+          }
+          break;
+        case '3':
+          const numSuitcases = prompt('Quantas malas de viagem?');
+          if (numSuitcases !== null && numSuitcases !== '' && !isNaN(numSuitcases) && numSuitcases >= 1) {
+            deliveryOption = `Malas de viagem (${numSuitcases} malas)`;
+          } else {
+            alert('Por favor, insira um número válido de malas.');
+            return;
+          }
+          break;
+        default:
+          alert('Opção inválida.');
+          return;
+      }
+      choices.push(`Entrega: ${deliveryOption}`);
+      alert(`Você selecionou ${deliveryOption}.`);
+    }
+
+    function selectDestination() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          startPoint = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          alert(`Sua localização atual: ${startPoint.lat.toFixed(4)}, ${startPoint.lng.toFixed(4)}`);
+          document.getElementById('mapContainer').classList.remove('hidden');
+        }, function(error) {
+          alert('Erro ao obter sua localização. Por favor, tente novamente.');
+        });
+      } else {
+        alert('Geolocalização não suportada pelo seu navegador.');
+      }
+    }
+
+    function showMap() {
+      const destination = document.getElementById('destination').value;
+      if (destination.trim() === '') {
+        alert('Por favor, insira um destino válido.');
+        return;
+      }
+      destinationPoint = encodeURIComponent(destination);
+      const mapFrame = document.getElementById('mapFrame');
+      mapFrame.src = `https://www.google.com/maps/embed/v1/directions?origin=${startPoint.lat},${startPoint.lng}&destination=${destinationPoint}&key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8`;
+    }
+
+    function viewChoices() {
+      const choicesList = document.getElementById('choicesList');
+      choicesList.innerHTML = '';
+      choices.forEach(choice => {
+        const listItem = document.createElement('li');
+        listItem.textContent = choice;
+        choicesList.appendChild(listItem);
+      });
+      document.getElementById('choices').classList.remove('hidden');
+    }
+
+    function formatoMoeda(numero) {
+      return numero.toFixed(2).replace('.', ',');
+    }
+
+    function calculateRide() {
+      const distanciaKm = document.getElementById('inputDistancia').value;
+      valorCorrida = 2 + distanciaKm * 1.4 + distanciaKm * 0.26;
+      document.getElementById('botaoCalcular').innerHTML = 'Total: R$' + formatoMoeda(valorCorrida);
+      saveToFile();
+    }
+
+    function saveToFile() {
+      let dataToSave = "";
+      choices.forEach(choice => {
+        dataToSave += `- ${choice}\n`;
+      });
+
+      if (startPoint && destinationPoint) {
+        dataToSave += `https://www.google.com/maps/embed/v1/directions?origin=${startPoint.lat},${startPoint.lng}&destination=${destinationPoint}&key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8\n`;
+      }
+
+      dataToSave += formatoMoeda(valorCorrida);
+
+      fetch('http://127.0.0.1:8080/create-corrida', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain'
+        },
+        body: dataToSave
+      })
+      .then(response => response.text())
+      .then(result => {
+        alert(result);
+      })
+      .catch(error => {
+        console.error('Erro ao salvar o arquivo:', error);
+      });
+    }
+  </script>
+</body>
+</html>
