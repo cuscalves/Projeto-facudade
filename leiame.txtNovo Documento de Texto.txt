@@ -1,0 +1,7 @@
+instalar o nodejs portable
+abrir o console do node js
+cd PASTA_DO_SERVER
+
+executar: node server.js
+acessar os links de cliente e motorista.
+pronto.
